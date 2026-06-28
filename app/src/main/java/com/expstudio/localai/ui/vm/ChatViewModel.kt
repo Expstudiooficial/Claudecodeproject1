@@ -3,9 +3,11 @@ package com.expstudio.localai.ui.vm
 import androidx.lifecycle.viewModelScope
 import com.expstudio.localai.AppContainer
 import com.expstudio.localai.agent.AgentMode
+import com.expstudio.localai.agent.AgentTool
 import com.expstudio.localai.agent.PendingApproval
 import com.expstudio.localai.agent.ToolCall
 import com.expstudio.localai.agent.ToolCallParser
+import com.expstudio.localai.data.settings.AgentToolPermissions
 import com.expstudio.localai.data.db.entities.ChatMessage
 import com.expstudio.localai.data.db.entities.ChatSession
 import com.expstudio.localai.data.db.entities.InstalledModel
@@ -67,6 +69,18 @@ class ChatViewModel(private val container: AppContainer) : BaseViewModel() {
         settings.map { it.agentMode }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AgentMode.ASK)
 
+    val agentPermissions: StateFlow<AgentToolPermissions> =
+        settings.map { it.agentPermissions }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AgentToolPermissions())
+
+    val showTimestamps: StateFlow<Boolean> =
+        settings.map { it.showTimestamps }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val fontScale: StateFlow<Float> =
+        settings.map { it.fontScale }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1.0f)
+
     private val _pendingApproval = MutableStateFlow<PendingApproval?>(null)
     val pendingApproval: StateFlow<PendingApproval?> = _pendingApproval.asStateFlow()
 
@@ -78,6 +92,8 @@ class ChatViewModel(private val container: AppContainer) : BaseViewModel() {
 
     fun setAgentEnabled(enabled: Boolean) = container.settingsStore.setAgentEnabled(enabled)
     fun setAgentMode(mode: AgentMode) = container.settingsStore.setAgentMode(mode)
+    fun setAgentPermission(tool: AgentTool, allowed: Boolean) =
+        container.settingsStore.setAgentPermission(tool, allowed)
 
     fun newSession(onCreated: (Long) -> Unit) {
         viewModelScope.launch {
@@ -173,7 +189,15 @@ class ChatViewModel(private val container: AppContainer) : BaseViewModel() {
     /** Parse tool calls from [reply], gate them on the mode, execute, report. */
     private suspend fun runAgentTools(sessionId: Long, reply: String) {
         val repo = container.chatRepository
+        val perms = settings.value.agentPermissions
         for (call in ToolCallParser.parse(reply)) {
+            if (!perms.isAllowed(call.tool)) {
+                repo.addMessage(
+                    sessionId, Role.SYSTEM,
+                    "🔒 Blocked: ${call.tool.label} is turned off in agent permissions.",
+                )
+                continue
+            }
             if (!approveIfNeeded(call)) {
                 repo.addMessage(sessionId, Role.SYSTEM, "🚫 Denied: ${call.summary}")
                 continue

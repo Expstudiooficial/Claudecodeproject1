@@ -17,17 +17,23 @@ resources — not just its raw specs.
   then picks the best model and tunes context window, threads, batch size and
   sampling. It deliberately leaves headroom for the OS and your other apps, and
   **explains every decision** so you can trust (and override) it.
-- 🎚️ **Manual settings** — full hands-on control over temperature, top-P, repeat
-  penalty, context window, max tokens, threads and batch size. Set app-wide
-  defaults in Settings, or override them per-chat from the in-chat tuner.
+- 🎚️ **Deep manual settings** — categorized, collapsible control over *every*
+  llama.cpp knob: temperature, top-P, top-K, min-P, typical-P, repeat/frequency/
+  presence penalties, repeat-last-N, Mirostat (mode/tau/eta), tail-free-Z, seed,
+  context window, max tokens, threads, batch size, GPU layers, mmap/mlock/flash-
+  attention, a default system prompt, stop sequences and streaming. Set app-wide
+  defaults, override per-chat, or one-tap Smart Setup → **Apply to my defaults**.
 - 🤖 **Agent mode** — let the AI act on your device: read/write/delete files,
-  list folders, list & open apps, and run shell commands in the app sandbox.
-  Three safety levels — **Ask** (confirm everything), **Accept edits**
-  (reads/writes/opens auto-run; deletes and shell commands still ask) and
-  **Auto** (full autonomy). Permissions are requested only when you enable the
-  agent, and destructive actions are flagged before they run.
-- 💬 **Chat** — streaming responses, multiple saved sessions, per-session model
-  and parameters, in-chat model switcher.
+  make folders, list & open apps, read device info, and run shell commands.
+  Three safety levels — **Ask** / **Accept edits** / **Auto** — *plus* a
+  per-action permission switch for each capability so you can disable any tool
+  entirely. Permissions are requested only when you enable the agent, and
+  destructive actions are flagged before they run.
+- 💬 **Chat** — a visible **Chat ⇄ Agent** segmented switch, streaming
+  responses, message timestamps + copy, adjustable font size, multiple saved
+  sessions, per-session model and parameters, in-chat model switcher.
+- 🎨 **Appearance** — light / dark / system theme, Material You dynamic colour,
+  font scaling and a timestamp toggle.
 - 📥 **Model manager** — curated, mobile-optimized models with resumable
   downloads, progress/speed, and on-device cache management.
 - ⚙️ **Settings & system dashboard** — live RAM usage (total / available /

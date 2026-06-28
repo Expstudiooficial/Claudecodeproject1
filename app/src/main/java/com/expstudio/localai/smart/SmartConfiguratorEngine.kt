@@ -90,15 +90,41 @@ class SmartConfiguratorEngine {
             else -> 256
         }
 
+        // mlock (pin weights in RAM) only when there's comfortable headroom —
+        // otherwise it risks OOM on tight devices.
+        val mlock = budgetMb > loadMb * 1.6 && !device.isLowRamDevice
+        reasons += if (mlock) {
+            "Enabling mlock to pin weights in RAM (plenty of headroom) for steadier speed."
+        } else {
+            "Leaving mlock off so the OS can reclaim memory under pressure."
+        }
+
         val params = InferenceParams(
             temperature = 0.7f,
             topP = 0.95f,
+            topK = 40,
+            minP = 0.05f,
+            typicalP = 1.0f,
             repeatPenalty = 1.1f,
+            frequencyPenalty = 0f,
+            presencePenalty = 0f,
+            repeatLastN = 64,
+            mirostat = 0,
+            mirostatTau = 5.0f,
+            mirostatEta = 0.1f,
+            tfsZ = 1.0f,
+            seed = -1,
             contextWindow = contextWindow,
             maxTokens = if (contextWindow >= 4096) 768 else 384,
             threads = threads,
             gpuLayers = 0, // CPU-first; GPU/NPU offload is a later milestone
             batchSize = batchSize,
+            useMmap = true,
+            useMlock = mlock,
+            flashAttention = false,
+            systemPrompt = "",
+            stopSequences = "",
+            streamResponses = true,
         )
 
         val tokPerSec = estimateTokensPerSecond(chosen, threads, device)

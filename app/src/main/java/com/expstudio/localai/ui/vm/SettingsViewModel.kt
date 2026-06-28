@@ -3,8 +3,10 @@ package com.expstudio.localai.ui.vm
 import androidx.lifecycle.viewModelScope
 import com.expstudio.localai.AppContainer
 import com.expstudio.localai.agent.AgentMode
+import com.expstudio.localai.agent.AgentTool
 import com.expstudio.localai.data.model.InferenceParams
 import com.expstudio.localai.data.settings.AppSettings
+import com.expstudio.localai.data.settings.AppTheme
 import com.expstudio.localai.smart.DeviceProfile
 import com.expstudio.localai.smart.SmartRecommendation
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,8 +20,15 @@ class SettingsViewModel(private val container: AppContainer) : BaseViewModel() {
     val settings: StateFlow<AppSettings> = container.settingsStore.settings
 
     fun updateDefaults(params: InferenceParams) = container.settingsStore.updateDefaults(params)
+    fun resetDefaults() = container.settingsStore.resetDefaults()
     fun setAgentEnabled(enabled: Boolean) = container.settingsStore.setAgentEnabled(enabled)
     fun setAgentMode(mode: AgentMode) = container.settingsStore.setAgentMode(mode)
+    fun setAgentPermission(tool: AgentTool, allowed: Boolean) =
+        container.settingsStore.setAgentPermission(tool, allowed)
+    fun setTheme(theme: AppTheme) = container.settingsStore.setTheme(theme)
+    fun setDynamicColor(on: Boolean) = container.settingsStore.setDynamicColor(on)
+    fun setFontScale(scale: Float) = container.settingsStore.setFontScale(scale)
+    fun setShowTimestamps(on: Boolean) = container.settingsStore.setShowTimestamps(on)
 
     private val _device = MutableStateFlow<DeviceProfile?>(null)
     val device: StateFlow<DeviceProfile?> = _device.asStateFlow()
@@ -67,6 +76,12 @@ class SettingsViewModel(private val container: AppContainer) : BaseViewModel() {
                 )
             )
         }
+    }
+
+    /** Writes the current recommendation's tuned params into the app-wide defaults. */
+    fun applyRecommendationToDefaults() {
+        val rec = _recommendation.value ?: return
+        container.settingsStore.updateDefaults(rec.params)
     }
 
     fun dismissRecommendation() { _recommendation.value = null }

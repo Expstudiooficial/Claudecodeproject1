@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base application theme. Colors are driven by the Compose theme at
+         runtime; this XML theme just provides a sane, no-action-bar window
+         that supports light/dark. -->
+    <style name="Theme.LocalAI" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

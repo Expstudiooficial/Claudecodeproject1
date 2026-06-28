@@ -1,0 +1,16 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Simple chat-bubble "AI" mark on the adaptive foreground. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,34h40a8,8 0 0,1 8,8v22a8,8 0 0,1 -8,8H52l-12,10v-10h-6a8,8 0 0,1 -8,-8V42a8,8 0 0,1 8,-8z" />
+    <path
+        android:fillColor="#3D5AFE"
+        android:pathData="M48,46l-7,18h5l1.2,-3.5h5.6L60,64h5l-7,-18zM50.8,52l1.6,5h-3.2z" />
+    <path
+        android:fillColor="#3D5AFE"
+        android:pathData="M66,46h4v18h-4z" />
+</vector>

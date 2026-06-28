@@ -1,0 +1,99 @@
+# LocalAI — Run LLMs locally on Android
+
+A native Android app for running large language models **fully offline** on your
+phone via [llama.cpp](https://github.com/ggerganov/llama.cpp). It targets modest
+devices (≈2–3 GB usable RAM) using 3–4 bit GGUF quantization, with a one-tap
+**Smart Setup** that tunes everything to your device's *currently available*
+resources — not just its raw specs.
+
+> Status: scaffold / MVP. The full app architecture, UI, data layer, download
+> manager and smart configurator are implemented. Real inference requires
+> fetching the native backend (see [Native backend](#native-backend)); until
+> then the app runs in a **simulation mode** so the whole UI is usable.
+
+## Features
+
+- 🧠 **Smart Setup** — one button analyzes free RAM, CPU cores and device class,
+  then picks the best model and tunes context window, threads, batch size and
+  sampling. It deliberately leaves headroom for the OS and your other apps, and
+  **explains every decision** so you can trust (and override) it.
+- 💬 **Chat** — streaming responses, multiple saved sessions, per-session model
+  and parameters.
+- 📥 **Model manager** — curated, mobile-optimized models with resumable
+  downloads, progress/speed, and on-device cache management.
+- ⚙️ **Settings & system dashboard** — live RAM usage (total / available /
+  in-use), CPU/arch info, backend status and cache size.
+
+## Curated models
+
+Four headline picks tuned for phones, plus optional larger downloads:
+
+| Model | Params | Quant | Size | Min free RAM |
+|-------|--------|-------|------|--------------|
+| **Gemma 2 2B Instruct** (Google) | 2.6B | Q4_K_M | ~1.7 GB | ~1.8 GB |
+| **Qwen2.5 1.5B Instruct** (Alibaba) | 1.5B | Q4_K_M | ~1.0 GB | ~1.3 GB |
+| **Phi-3.5 Mini Instruct** (Microsoft) | 3.8B | Q4_K_M | ~2.4 GB | ~2.6 GB |
+| **Mistral 7B Instruct v0.3** (Mistral AI) | 7.2B | Q4_K_M | ~4.4 GB | ~4.6 GB |
+
+Additional: Gemma 3n E2B / E4B, Qwen2.5 3B, Llama 3.2 3B. See
+[`ModelCatalog.kt`](app/src/main/java/com/expstudio/localai/data/model/ModelCatalog.kt).
+
+## Architecture
+
+MVVM + a small manual-DI container ([`LocalAiApp`](app/src/main/java/com/expstudio/localai/LocalAiApp.kt)).
+
+```
+ui/            Jetpack Compose screens + ViewModels + navigation
+  screens/     Home (sessions), Chat, ModelManager, Settings
+  vm/          ChatViewModel, ModelManagerViewModel, SettingsViewModel
+data/
+  db/          Room entities, DAOs, database
+  model/       CatalogModel, ModelCatalog, InferenceParams
+  repo/        ModelRepository, ChatRepository
+download/      Resumable ModelDownloadManager + foreground DownloadService
+inference/     LlamaInferenceEngine (Kotlin) + LlamaBridge (JNI)
+smart/         DeviceProfile + SmartConfiguratorEngine (the Smart Setup brain)
+cpp/           JNI bridge + CMake for the llama.cpp backend
+```
+
+## Building
+
+Requires Android Studio (Koala+) or the Android SDK with the command-line tools.
+
+```bash
+# 1. Point Gradle at your SDK (or set ANDROID_HOME)
+echo "sdk.dir=/path/to/Android/Sdk" > local.properties
+
+# 2. Build the debug APK
+./gradlew assembleDebug
+```
+
+Open the project in Android Studio and run on a device/emulator for the full
+experience. Minimum Android 8.0 (API 26).
+
+## Native backend
+
+To enable real on-device inference, fetch llama.cpp into the native source tree
+and rebuild:
+
+```bash
+./scripts/setup_native.sh        # clones llama.cpp into app/src/main/cpp/llama.cpp
+./gradlew assembleDebug
+```
+
+The CMake build auto-detects the checkout: present → real backend, absent →
+a lightweight JNI **stub** so the app still compiles and the UI works
+(responses are clearly labelled as simulated). The model weights themselves are
+never committed — they're downloaded in-app to app-scoped storage.
+
+## How Smart Setup works
+
+[`SmartConfiguratorEngine`](app/src/main/java/com/expstudio/localai/smart/SmartConfiguratorEngine.kt)
+budgets from **available** RAM (via `ActivityManager.MemoryInfo`), reserves
+headroom (more on low-RAM devices) so the OS/background apps stay healthy, then:
+
+1. picks the largest model whose weights + a minimal context fit the budget
+   (preferring already-installed models);
+2. sizes the context window to leftover RAM after weights (KV-cache estimate);
+3. leaves CPU cores for the UI/system and scales batch size to RAM;
+4. estimates throughput and returns a human-readable rationale.

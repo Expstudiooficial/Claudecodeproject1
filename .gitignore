@@ -1,0 +1,22 @@
+# Built artifacts
+*.iml
+.gradle/
+/local.properties
+/build/
+/app/build/
+/captures/
+.externalNativeBuild/
+.cxx/
+
+# IDE
+.idea/
+*.hprof
+
+# Native checkout fetched by scripts/setup_native.sh
+/app/src/main/cpp/llama.cpp/
+
+# Downloaded GGUF models (never commit large weights)
+*.gguf
+
+# OS
+.DS_Store

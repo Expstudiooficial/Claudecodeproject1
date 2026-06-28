@@ -17,8 +17,17 @@ resources — not just its raw specs.
   then picks the best model and tunes context window, threads, batch size and
   sampling. It deliberately leaves headroom for the OS and your other apps, and
   **explains every decision** so you can trust (and override) it.
+- 🎚️ **Manual settings** — full hands-on control over temperature, top-P, repeat
+  penalty, context window, max tokens, threads and batch size. Set app-wide
+  defaults in Settings, or override them per-chat from the in-chat tuner.
+- 🤖 **Agent mode** — let the AI act on your device: read/write/delete files,
+  list folders, list & open apps, and run shell commands in the app sandbox.
+  Three safety levels — **Ask** (confirm everything), **Accept edits**
+  (reads/writes/opens auto-run; deletes and shell commands still ask) and
+  **Auto** (full autonomy). Permissions are requested only when you enable the
+  agent, and destructive actions are flagged before they run.
 - 💬 **Chat** — streaming responses, multiple saved sessions, per-session model
-  and parameters.
+  and parameters, in-chat model switcher.
 - 📥 **Model manager** — curated, mobile-optimized models with resumable
   downloads, progress/speed, and on-device cache management.
 - ⚙️ **Settings & system dashboard** — live RAM usage (total / available /

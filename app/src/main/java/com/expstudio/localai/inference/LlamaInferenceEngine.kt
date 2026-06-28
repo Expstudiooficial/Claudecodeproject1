@@ -77,11 +77,12 @@ class LlamaInferenceEngine {
         modelPath: String,
         history: List<ChatMessage>,
         params: InferenceParams,
+        agentMode: Boolean = false,
     ): Flow<String> = flow {
         val ready = ensureModelLoaded(modelPath, params)
 
         if (!ready || isStub) {
-            emitAll(simulate(history))
+            emitAll(simulate(history, agentMode))
             return@flow
         }
 
@@ -91,10 +92,10 @@ class LlamaInferenceEngine {
         // present we fall back to simulation rather than crashing.
         try {
             // Placeholder for: bridge.nativeGenerate(handle, prompt, params) { token -> emit(token) }
-            emitAll(simulate(history))
+            emitAll(simulate(history, agentMode))
         } catch (t: UnsatisfiedLinkError) {
             Log.w(TAG, "Native generate not available, simulating", t)
-            emitAll(simulate(history))
+            emitAll(simulate(history, agentMode))
         }
     }.flowOn(Dispatchers.Default)
 
@@ -113,16 +114,40 @@ class LlamaInferenceEngine {
         }
 
     /** Token-by-token simulated stream so the UI works without a native backend. */
-    private fun simulate(history: List<ChatMessage>): Flow<String> = flow {
+    private fun simulate(history: List<ChatMessage>, agentMode: Boolean): Flow<String> = flow {
         val lastUser = history.lastOrNull { it.role == Role.USER }?.content?.trim().orEmpty()
-        val reply = "[Simulated reply — install the native backend via " +
-            "scripts/setup_native.sh for real inference]\n\n" +
-            "You said: \"$lastUser\". On a real device this response would be " +
-            "generated locally by the selected GGUF model, fully offline."
+        val reply = if (agentMode) simulatedAgentReply(lastUser) else
+            "[Simulated reply — install the native backend via " +
+                "scripts/setup_native.sh for real inference]\n\n" +
+                "You said: \"$lastUser\". On a real device this response would be " +
+                "generated locally by the selected GGUF model, fully offline."
         for (word in reply.split(" ")) {
             emit("$word ")
-            delay(25)
+            delay(20)
         }
+    }
+
+    /**
+     * In simulation, the agent still emits a *real* tool call so the whole
+     * agent loop (parse → approve → execute on the device) is exercised end to
+     * end even before the native backend is installed. The tool is chosen from
+     * simple keywords in the user's message.
+     */
+    private fun simulatedAgentReply(userText: String): String {
+        val lc = userText.lowercase()
+        val (intro, toolJson) = when {
+            listOf("app", "open", "launch").any { it in lc } ->
+                "Sure — let me look at what's installed." to
+                    """{"tool":"list_apps","args":{}}"""
+            listOf("file", "folder", "dir", "list", "read", "write").any { it in lc } ->
+                "I'll check the app's files for you." to
+                    """{"tool":"list_files","args":{"path":"."}}"""
+            else ->
+                "Let me inspect this device first." to
+                    """{"tool":"device_info","args":{}}"""
+        }
+        return "$intro\n\n```tool\n$toolJson\n```\n\n" +
+            "_(Simulated agent — install the native backend for a real model to drive these tools.)_"
     }
 
     companion object { private const val TAG = "LlamaEngine" }

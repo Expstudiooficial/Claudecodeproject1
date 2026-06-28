@@ -1,8 +1,10 @@
 package com.expstudio.localai
 
 import android.app.Application
+import com.expstudio.localai.agent.AgentToolExecutor
 import com.expstudio.localai.data.repo.ChatRepository
 import com.expstudio.localai.data.repo.ModelRepository
+import com.expstudio.localai.data.settings.SettingsStore
 import com.expstudio.localai.inference.LlamaInferenceEngine
 import com.expstudio.localai.smart.SmartConfiguratorEngine
 
@@ -22,9 +24,11 @@ class LocalAiApp : Application() {
 }
 
 class AppContainer(app: LocalAiApp) {
+    val appContext = app.applicationContext
     val modelRepository = ModelRepository(app)
     val chatRepository = ChatRepository(app)
     val inferenceEngine = LlamaInferenceEngine()
     val smartConfigurator = SmartConfiguratorEngine()
-    val appContext = app.applicationContext
+    val settingsStore = SettingsStore(app)
+    val agentToolExecutor = AgentToolExecutor(app)
 }

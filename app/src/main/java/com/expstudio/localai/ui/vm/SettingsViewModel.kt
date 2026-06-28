@@ -2,6 +2,9 @@ package com.expstudio.localai.ui.vm
 
 import androidx.lifecycle.viewModelScope
 import com.expstudio.localai.AppContainer
+import com.expstudio.localai.agent.AgentMode
+import com.expstudio.localai.data.model.InferenceParams
+import com.expstudio.localai.data.settings.AppSettings
 import com.expstudio.localai.smart.DeviceProfile
 import com.expstudio.localai.smart.SmartRecommendation
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,6 +13,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class SettingsViewModel(private val container: AppContainer) : BaseViewModel() {
+
+    /** App-wide settings (default generation params + agent config). */
+    val settings: StateFlow<AppSettings> = container.settingsStore.settings
+
+    fun updateDefaults(params: InferenceParams) = container.settingsStore.updateDefaults(params)
+    fun setAgentEnabled(enabled: Boolean) = container.settingsStore.setAgentEnabled(enabled)
+    fun setAgentMode(mode: AgentMode) = container.settingsStore.setAgentMode(mode)
 
     private val _device = MutableStateFlow<DeviceProfile?>(null)
     val device: StateFlow<DeviceProfile?> = _device.asStateFlow()

@@ -5,6 +5,7 @@ import com.expstudio.localai.data.db.AppDatabase
 import com.expstudio.localai.data.db.entities.ChatMessage
 import com.expstudio.localai.data.db.entities.ChatSession
 import com.expstudio.localai.data.db.entities.Role
+import com.expstudio.localai.data.model.InferenceParams
 import kotlinx.coroutines.flow.Flow
 
 /** CRUD + helpers for conversations and their messages. */
@@ -16,8 +17,23 @@ class ChatRepository(context: Context) {
 
     fun messages(sessionId: Long): Flow<List<ChatMessage>> = dao.observeMessages(sessionId)
 
-    suspend fun createSession(title: String, modelId: String?): Long =
-        dao.insertSession(ChatSession(title = title, modelId = modelId))
+    suspend fun createSession(
+        title: String,
+        modelId: String?,
+        params: InferenceParams? = null,
+    ): Long {
+        val base = ChatSession(title = title, modelId = modelId)
+        val session = params?.let {
+            base.copy(
+                temperature = it.temperature,
+                topP = it.topP,
+                repeatPenalty = it.repeatPenalty,
+                contextWindow = it.contextWindow,
+                maxTokens = it.maxTokens,
+            )
+        } ?: base
+        return dao.insertSession(session)
+    }
 
     suspend fun getSession(id: Long): ChatSession? = dao.getSession(id)
 

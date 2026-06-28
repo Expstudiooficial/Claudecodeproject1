@@ -64,6 +64,10 @@ class ChatViewModel(private val container: AppContainer) : BaseViewModel() {
     private val _streaming = MutableStateFlow<String?>(null)
     val streaming: StateFlow<String?> = _streaming.asStateFlow()
 
+    /** Name of the model being loaded into memory (null when not loading). */
+    private val _loadingModel = MutableStateFlow<String?>(null)
+    val loadingModel: StateFlow<String?> = _loadingModel.asStateFlow()
+
     // ---- Agent state (mirrors the global settings store) ----
     val agentEnabled: StateFlow<Boolean> =
         settings.map { it.agentEnabled }
@@ -193,14 +197,36 @@ class ChatViewModel(private val container: AppContainer) : BaseViewModel() {
         val modelPath = model?.let { container.modelRepository.filePathFor(it) } ?: ""
         val agentOn = settings.value.agentEnabled
 
-        val sb = StringBuilder()
-        _streaming.value = ""
-        container.inferenceEngine
-            .generate(modelPath, history, params, agentMode = agentOn)
-            .collect { chunk ->
-                sb.append(chunk)
-                _streaming.value = sb.toString()
+        // ---- Memory safeguard: refuse to load a model that won't fit (unless disabled). ----
+        if (settings.value.memorySafeguards && model != null) {
+            val device = com.expstudio.localai.smart.DeviceProfile.snapshot(container.appContext)
+            if (device.availableRamMb in 1 until model.minRamMb) {
+                repo.addMessage(
+                    sessionId, Role.SYSTEM,
+                    "🛡️ Safeguard: ${model.displayName} needs ~${model.minRamMb} MB free but only " +
+                        "${device.availableRamMb} MB is available. Pick a smaller model, free up " +
+                        "memory, or turn off Memory safeguards in Settings to force it.",
+                )
+                return
             }
+        }
+
+        val sb = StringBuilder()
+        // Model load happens at the start of generate(); show a loading indicator
+        // until the first token arrives.
+        _loadingModel.value = model?.displayName ?: "model"
+        _streaming.value = ""
+        try {
+            container.inferenceEngine
+                .generate(modelPath, history, params, agentMode = agentOn)
+                .collect { chunk ->
+                    _loadingModel.value = null // first token → done loading
+                    sb.append(chunk)
+                    _streaming.value = sb.toString()
+                }
+        } finally {
+            _loadingModel.value = null
+        }
 
         val reply = sb.toString().trim()
         repo.addMessage(sessionId, Role.ASSISTANT, reply)
@@ -248,6 +274,7 @@ class ChatViewModel(private val container: AppContainer) : BaseViewModel() {
     fun stopGeneration() {
         generationJob?.cancel()
         _streaming.value = null
+        _loadingModel.value = null
         _pendingApproval.value?.deferred?.complete(false)
         _pendingApproval.value = null
     }

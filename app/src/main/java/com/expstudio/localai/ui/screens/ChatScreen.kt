@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -30,7 +31,9 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -103,6 +106,7 @@ fun ChatScreen(
     val installed by vm.installedModels.collectAsStateSafe()
     val showTimestamps by vm.showTimestamps.collectAsStateSafe()
     val fontScale by vm.fontScale.collectAsStateSafe()
+    val loadingModel by vm.loadingModel.collectAsStateSafe()
 
     var input by remember { mutableStateOf("") }
     var showSettings by remember { mutableStateOf(false) }
@@ -169,6 +173,9 @@ fun ChatScreen(
             ) {
                 items(messages, key = { it.id }) { msg ->
                     MessageBubble(msg, showTimestamps, fontScale)
+                }
+                loadingModel?.let { name ->
+                    item(key = "loading") { ModelLoadingCard(name) }
                 }
                 streaming?.let { partial ->
                     item(key = "streaming") {
@@ -289,6 +296,35 @@ private fun MessageBubble(msg: ChatMessage, showTimestamps: Boolean, fontScale: 
                     }
                 }
             }
+        }
+    }
+}
+
+/** Shown while a model is being loaded into memory before the first token. */
+@Composable
+private fun ModelLoadingCard(name: String) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                Text(
+                    "  Loading $name into memory…",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            LinearProgressIndicator(Modifier.fillMaxWidth())
+            Text(
+                "First load can take a little while on phones — it's cached after this.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.padding(top = 4.dp),
+            )
         }
     }
 }

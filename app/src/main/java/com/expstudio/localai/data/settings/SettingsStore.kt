@@ -73,6 +73,7 @@ class SettingsStore(context: Context) {
             dynamicColor = prefs.getBoolean(K_DYNAMIC, true),
             fontScale = prefs.getFloat(K_FONT, 1.0f),
             showTimestamps = prefs.getBoolean(K_TIMES, true),
+            memorySafeguards = prefs.getBoolean(K_SAFE, true),
             onboarded = prefs.getBoolean(K_ONBOARDED, false),
         )
     }
@@ -80,6 +81,11 @@ class SettingsStore(context: Context) {
     fun setOnboarded(done: Boolean) {
         prefs.edit().putBoolean(K_ONBOARDED, done).apply()
         _settings.value = _settings.value.copy(onboarded = done)
+    }
+
+    fun setMemorySafeguards(on: Boolean) {
+        prefs.edit().putBoolean(K_SAFE, on).apply()
+        _settings.value = _settings.value.copy(memorySafeguards = on)
     }
 
     fun updateDefaults(p: InferenceParams) {
@@ -204,6 +210,7 @@ class SettingsStore(context: Context) {
         const val K_DYNAMIC = "dynamic_color"
         const val K_FONT = "font_scale"
         const val K_TIMES = "show_timestamps"
+        const val K_SAFE = "memory_safeguards"
         const val K_ONBOARDED = "onboarded"
     }
 }

@@ -29,6 +29,7 @@ class SettingsViewModel(private val container: AppContainer) : BaseViewModel() {
     fun setDynamicColor(on: Boolean) = container.settingsStore.setDynamicColor(on)
     fun setFontScale(scale: Float) = container.settingsStore.setFontScale(scale)
     fun setShowTimestamps(on: Boolean) = container.settingsStore.setShowTimestamps(on)
+    fun setMemorySafeguards(on: Boolean) = container.settingsStore.setMemorySafeguards(on)
 
     private val _device = MutableStateFlow<DeviceProfile?>(null)
     val device: StateFlow<DeviceProfile?> = _device.asStateFlow()

@@ -125,6 +125,24 @@ fun SettingsScreen(
                 onPermissionChange = { tool, allowed -> vm.setAgentPermission(tool, allowed) },
             )
 
+            // ---- Safety ----
+            SectionCard("Safety", "Guardrails so a model can't overload your device.") {
+                SwitchParam(
+                    "Memory safeguards",
+                    settings.memorySafeguards,
+                    help = "Block loading a model when free RAM is below its minimum. " +
+                        "Turn off to force-load anyway (may crash on low memory).",
+                ) { vm.setMemorySafeguards(it) }
+                Text(
+                    "Only one model is ever held in memory at a time — loading a new one " +
+                        "automatically unloads the previous, so there's no overload from " +
+                        "stacking models.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            }
+
             // ---- Appearance ----
             AppearanceCard(
                 theme = settings.theme,

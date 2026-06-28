@@ -42,7 +42,11 @@ class DownloadCoordinator(
 
     fun start(model: CatalogModel) {
         if (jobs[model.id]?.isActive == true) return
-        // Bring up the foreground notification so the OS keeps us alive.
+        // Seed an active state *before* starting the service so the foreground
+        // service never sees an empty state and stop itself in a race.
+        _states.update { it + (model.id to DownloadState.Downloading(0, model.fileSizeBytes, 0)) }
+        // Bring up the foreground notification so the OS keeps the process (and
+        // this download) alive while the app is backgrounded.
         runCatching { DownloadService.start(appContext, model.id) }
         jobs[model.id] = scope.launch {
             downloader.download(model).collect { state ->

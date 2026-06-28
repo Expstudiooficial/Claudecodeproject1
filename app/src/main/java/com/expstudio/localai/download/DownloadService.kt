@@ -40,20 +40,26 @@ class DownloadService : Service() {
         val coordinator = (application as LocalAiApp).container.downloadCoordinator
         job?.cancel()
         job = scope.launch {
+            var sawActive = false
             coordinator.states.collect { states ->
                 val active = states.entries.firstOrNull { it.value is DownloadState.Downloading }
                 val verifying = states.values.any { it is DownloadState.Verifying }
                 when {
                     active != null -> {
+                        sawActive = true
                         val d = active.value as DownloadState.Downloading
                         val name = ModelCatalog.byId(active.key)?.displayName ?: "Model"
                         notify(buildNotification(name, d.percent))
                     }
-                    verifying -> notify(buildNotification("Verifying…", 100))
-                    else -> {
+                    verifying -> { sawActive = true; notify(buildNotification("Verifying…", 100)) }
+                    // Only stop once we've actually run a download and none remain —
+                    // never stop on the initial empty tick (that killed downloads
+                    // as soon as the app was backgrounded).
+                    sawActive -> {
                         stopForeground(STOP_FOREGROUND_REMOVE)
                         stopSelf()
                     }
+                    else -> Unit
                 }
             }
         }

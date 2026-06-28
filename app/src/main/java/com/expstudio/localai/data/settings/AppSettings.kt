@@ -70,6 +70,9 @@ data class AppSettings(
     val dynamicColor: Boolean = true,
     val fontScale: Float = 1.0f,
     val showTimestamps: Boolean = true,
+    // Safety
+    /** Block loading a model when free RAM is below its minimum (toggle off to force it). */
+    val memorySafeguards: Boolean = true,
     // First-run
     val onboarded: Boolean = false,
 )

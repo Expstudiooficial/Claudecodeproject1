@@ -212,9 +212,11 @@ class ChatViewModel(private val container: AppContainer) : BaseViewModel() {
         }
 
         val sb = StringBuilder()
-        // Model load happens at the start of generate(); show a loading indicator
-        // until the first token arrives.
-        _loadingModel.value = model?.displayName ?: "model"
+        // Only show the loading indicator when the model isn't already resident —
+        // i.e. on the first message or after a model switch, not every turn.
+        val needsLoad = model != null &&
+            !container.inferenceEngine.isModelResident(modelPath, params)
+        _loadingModel.value = if (needsLoad) model?.displayName else null
         _streaming.value = ""
         try {
             container.inferenceEngine

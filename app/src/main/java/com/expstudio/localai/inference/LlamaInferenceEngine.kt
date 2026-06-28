@@ -33,6 +33,18 @@ class LlamaInferenceEngine {
     val backend: String get() = if (LlamaBridge.ensureLoaded()) bridge.backendInfo() else "unavailable"
     val isStub: Boolean get() = backend != "llama.cpp"
 
+    /**
+     * True if this exact model+context is already resident in memory, so a
+     * generation won't trigger a (slow) load. Lets the UI show the "loading"
+     * indicator only when an actual load will happen.
+     */
+    @Synchronized
+    fun isModelResident(modelPath: String, params: InferenceParams): Boolean =
+        handle != 0L &&
+            loadedModelPath == modelPath &&
+            loadedContext == params.contextWindow &&
+            !isStub
+
     @Synchronized
     fun ensureModelLoaded(modelPath: String, params: InferenceParams): Boolean {
         if (!LlamaBridge.ensureLoaded()) {

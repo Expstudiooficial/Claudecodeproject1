@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.expstudio.localai.data.model.CatalogModel
 import com.expstudio.localai.download.DownloadState
+import com.expstudio.localai.ui.util.collectAsStateSafe
 import com.expstudio.localai.ui.vm.AppViewModelFactory
 import com.expstudio.localai.ui.vm.ModelManagerViewModel
 

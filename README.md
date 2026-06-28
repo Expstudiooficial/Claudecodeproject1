@@ -6,10 +6,11 @@ devices (≈2–3 GB usable RAM) using 3–4 bit GGUF quantization, with a one-t
 **Smart Setup** that tunes everything to your device's *currently available*
 resources — not just its raw specs.
 
-> Status: scaffold / MVP. The full app architecture, UI, data layer, download
-> manager and smart configurator are implemented. Real inference requires
-> fetching the native backend (see [Native backend](#native-backend)); until
-> then the app runs in a **simulation mode** so the whole UI is usable.
+> Status: MVP. The CI build fetches and compiles **llama.cpp into the APK**, so
+> installed builds run **real on-device inference** — the model you download
+> answers your first message, fully offline. If no model is downloaded yet (or
+> the native lib fails to load) the app falls back to a clearly-labelled
+> **simulation mode** so the UI always works.
 
 ## Features
 

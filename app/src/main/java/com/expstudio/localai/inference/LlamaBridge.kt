@@ -20,6 +20,20 @@ class LlamaBridge {
         nGpuLayers: Int,
     ): Long
 
+    /**
+     * Runs a blocking completion and returns the full generated text. Empty
+     * string signals the caller to fall back (e.g. in stub mode).
+     */
+    external fun nativeGenerate(
+        handle: Long,
+        prompt: String,
+        maxTokens: Int,
+        temperature: Float,
+        topP: Float,
+        topK: Int,
+        seed: Int,
+    ): String
+
     external fun nativeFree(handle: Long)
 
     /** "llama.cpp" for a real backend, "stub" otherwise. */

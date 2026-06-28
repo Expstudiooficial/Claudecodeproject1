@@ -26,6 +26,15 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      # Fetch the real inference engine so it's compiled into the APK.
+      # End users never do this — it happens here in CI.
+      - name: Fetch llama.cpp (real inference backend)
+        run: |
+          if [ ! -d app/src/main/cpp/llama.cpp/.git ]; then
+            git clone --depth 1 https://github.com/ggml-org/llama.cpp app/src/main/cpp/llama.cpp
+          fi
+          echo "llama.cpp at: $(cd app/src/main/cpp/llama.cpp && git rev-parse --short HEAD)"
+
       - name: Build debug APK
         run: ./gradlew assembleDebug --stacktrace
 

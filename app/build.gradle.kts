@@ -14,20 +14,22 @@ android {
         applicationId = "com.expstudio.localai"
         minSdk = 26          // Android 8.0 — broad device compatibility
         targetSdk = 34
-        versionCode = 4
-        versionName = "0.4.0"
+        versionCode = 5
+        versionName = "0.5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // llama.cpp native build — keep ABIs lean for smaller APKs.
+        // llama.cpp native build — arm64 only (covers essentially all modern
+        // phones, keeps the APK small and the native build fast/reliable).
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            abiFilters += listOf("arm64-v8a")
         }
         externalNativeBuild {
             cmake {
                 // Optimised flags for on-device inference.
                 cppFlags += "-O3 -fexceptions -frtti"
-                arguments += "-DLLAMA_BUILD=ON"
+                // Never use -march=native when cross-compiling for the device.
+                arguments += "-DGGML_NATIVE=OFF"
             }
         }
     }

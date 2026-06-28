@@ -17,8 +17,14 @@ if(EXISTS "${LLAMA_DIR}/CMakeLists.txt")
     # Mobile-friendly llama.cpp options.
     set(LLAMA_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
     set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(LLAMA_BUILD_TOOLS    OFF CACHE BOOL "" FORCE)
     set(LLAMA_BUILD_SERVER   OFF CACHE BOOL "" FORCE)
+    set(LLAMA_CURL           OFF CACHE BOOL "" FORCE)
     set(GGML_OPENMP          OFF CACHE BOOL "" FORCE)
+    # CRITICAL for cross-compiling: never use -march=native on the build host.
+    set(GGML_NATIVE          OFF CACHE BOOL "" FORCE)
+    set(GGML_LLAMAFILE       OFF CACHE BOOL "" FORCE)
+    set(BUILD_SHARED_LIBS    OFF CACHE BOOL "" FORCE)
 
     add_subdirectory(${LLAMA_DIR} ${CMAKE_BINARY_DIR}/llama.cpp)
     target_link_libraries(localai llama)

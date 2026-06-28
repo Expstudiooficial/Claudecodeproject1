@@ -1,11 +1,12 @@
 // JNI bridge between the Kotlin LlamaBridge and the native llama.cpp backend.
 //
 // When compiled with HAVE_LLAMA (i.e. llama.cpp present), the calls drive the
-// real backend. Otherwise we compile a stub so the app still links and the UI
-// can be developed without the multi-hundred-MB native checkout.
+// real backend and generate actual tokens. Otherwise we compile a stub so the
+// app still links and the UI can be developed without the native checkout.
 
 #include <jni.h>
 #include <string>
+#include <vector>
 #include <android/log.h>
 
 #define LOG_TAG "LlamaBridge"
@@ -15,9 +16,13 @@
 #ifdef HAVE_LLAMA
 #include "llama.h"
 
+// The model is loaded once and kept resident. A fresh context is created per
+// generation so each reply starts from a clean KV cache fed the full prompt —
+// simple and robust, and it avoids cross-conversation state leaking.
 struct LlamaSession {
-    llama_model*   model   = nullptr;
-    llama_context* ctx     = nullptr;
+    llama_model* model    = nullptr;
+    int          n_ctx    = 4096;
+    int          n_threads = 4;
 };
 
 extern "C"
@@ -30,19 +35,84 @@ Java_com_expstudio_localai_inference_LlamaBridge_nativeLoadModel(
     llama_model_params mparams = llama_model_default_params();
     mparams.n_gpu_layers = nGpuLayers;
 
-    llama_model* model = llama_load_model_from_file(cpath, mparams);
+    llama_model* model = llama_model_load_from_file(cpath, mparams);
     env->ReleaseStringUTFChars(path, cpath);
     if (!model) { LOGE("Failed to load model"); return 0; }
 
-    llama_context_params cparams = llama_context_default_params();
-    cparams.n_ctx     = (uint32_t) nCtx;
-    cparams.n_threads = nThreads;
-    llama_context* ctx = llama_new_context_with_model(model, cparams);
-    if (!ctx) { llama_free_model(model); return 0; }
-
-    auto* s = new LlamaSession{model, ctx};
-    LOGI("Model loaded (n_ctx=%d, threads=%d, gpu_layers=%d)", nCtx, nThreads, nGpuLayers);
+    auto* s = new LlamaSession();
+    s->model = model;
+    s->n_ctx = nCtx > 0 ? nCtx : 4096;
+    s->n_threads = nThreads > 0 ? nThreads : 4;
+    LOGI("Model loaded (n_ctx=%d, threads=%d, gpu_layers=%d)", s->n_ctx, s->n_threads, nGpuLayers);
     return reinterpret_cast<jlong>(s);
+}
+
+extern "C"
+JNIEXPORT jstring JNICALL
+Java_com_expstudio_localai_inference_LlamaBridge_nativeGenerate(
+        JNIEnv* env, jobject /*thiz*/, jlong handle, jstring prompt,
+        jint maxTokens, jfloat temperature, jfloat topP, jint topK, jint seed) {
+    auto* s = reinterpret_cast<LlamaSession*>(handle);
+    if (!s || !s->model) return env->NewStringUTF("");
+
+    const llama_vocab* vocab = llama_model_get_vocab(s->model);
+
+    const char* cprompt = env->GetStringUTFChars(prompt, nullptr);
+    const std::string text(cprompt ? cprompt : "");
+    env->ReleaseStringUTFChars(prompt, cprompt);
+
+    // Fresh context per call → clean KV cache.
+    llama_context_params cparams = llama_context_default_params();
+    cparams.n_ctx          = (uint32_t) s->n_ctx;
+    cparams.n_batch        = (uint32_t) s->n_ctx;
+    cparams.n_threads      = s->n_threads;
+    cparams.n_threads_batch = s->n_threads;
+    llama_context* ctx = llama_init_from_model(s->model, cparams);
+    if (!ctx) { LOGE("Failed to create context"); return env->NewStringUTF(""); }
+
+    // Tokenize the full prompt (add BOS / special tokens).
+    int n_tokens = -llama_tokenize(vocab, text.c_str(), (int) text.size(),
+                                   nullptr, 0, true, true);
+    std::vector<llama_token> tokens(n_tokens);
+    if (llama_tokenize(vocab, text.c_str(), (int) text.size(),
+                       tokens.data(), (int) tokens.size(), true, true) < 0) {
+        llama_free(ctx);
+        return env->NewStringUTF("");
+    }
+
+    // Sampler chain: top-k -> top-p -> temperature -> distribution.
+    llama_sampler* smpl = llama_sampler_chain_init(llama_sampler_chain_default_params());
+    if (topK > 0) llama_sampler_chain_add(smpl, llama_sampler_init_top_k(topK));
+    llama_sampler_chain_add(smpl, llama_sampler_init_top_p(topP, 1));
+    llama_sampler_chain_add(smpl, llama_sampler_init_temp(temperature));
+    llama_sampler_chain_add(smpl, llama_sampler_init_dist(
+            seed < 0 ? LLAMA_DEFAULT_SEED : (uint32_t) seed));
+
+    std::string result;
+    llama_batch batch = llama_batch_get_one(tokens.data(), (int) tokens.size());
+    llama_token new_id;
+    int n_past = 0;
+    int generated = 0;
+    while (generated < maxTokens) {
+        if (n_past + batch.n_tokens > s->n_ctx) break; // out of context room
+        if (llama_decode(ctx, batch) != 0) break;
+        n_past += batch.n_tokens;
+
+        new_id = llama_sampler_sample(smpl, ctx, -1);
+        if (llama_vocab_is_eog(vocab, new_id)) break;
+
+        char buf[256];
+        int n = llama_token_to_piece(vocab, new_id, buf, sizeof(buf), 0, true);
+        if (n < 0) break;
+        result.append(buf, n);
+        generated++;
+
+        batch = llama_batch_get_one(&new_id, 1);
+    }
+
+    llama_sampler_free(smpl);
+    llama_free(ctx);
+    return env->NewStringUTF(result.c_str());
 }
 
 extern "C"
@@ -51,15 +121,10 @@ Java_com_expstudio_localai_inference_LlamaBridge_nativeFree(
         JNIEnv* /*env*/, jobject /*thiz*/, jlong handle) {
     auto* s = reinterpret_cast<LlamaSession*>(handle);
     if (!s) return;
-    if (s->ctx) llama_free(s->ctx);
-    if (s->model) llama_free_model(s->model);
+    if (s->model) llama_model_free(s->model);
     delete s;
     llama_backend_free();
 }
-
-// NOTE: token-by-token generation with a streaming callback into Kotlin is
-// wired in LlamaBridge.kt; the full sampling loop lives here once the
-// backend is fetched. Kept compact here for the scaffold.
 
 #else  // ---------------- STUB MODE ----------------
 
@@ -70,6 +135,14 @@ Java_com_expstudio_localai_inference_LlamaBridge_nativeLoadModel(
         jint /*nThreads*/, jint /*nGpuLayers*/) {
     LOGI("STUB nativeLoadModel — llama.cpp not compiled in");
     return 1; // non-zero fake handle
+}
+
+extern "C"
+JNIEXPORT jstring JNICALL
+Java_com_expstudio_localai_inference_LlamaBridge_nativeGenerate(
+        JNIEnv* env, jobject /*thiz*/, jlong /*handle*/, jstring /*prompt*/,
+        jint /*maxTokens*/, jfloat /*temperature*/, jfloat /*topP*/, jint /*topK*/, jint /*seed*/) {
+    return env->NewStringUTF(""); // empty → Kotlin falls back to simulation
 }
 
 extern "C"

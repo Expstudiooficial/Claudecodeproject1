@@ -87,21 +87,42 @@ class LlamaInferenceEngine {
         }
 
         // ---- Real backend path ----
-        // The streaming sampling loop lives in native code once llama.cpp is
-        // fetched (see cpp/llama_bridge.cpp). Until that native entry point is
-        // present we fall back to simulation rather than crashing.
-        try {
-            // Placeholder for: bridge.nativeGenerate(handle, prompt, params) { token -> emit(token) }
+        val prompt = buildPrompt(history, agentMode)
+        val text = try {
+            bridge.nativeGenerate(
+                handle = handle,
+                prompt = prompt,
+                maxTokens = params.maxTokens,
+                temperature = params.temperature,
+                topP = params.topP,
+                topK = params.topK,
+                seed = params.seed,
+            )
+        } catch (t: Throwable) {
+            Log.w(TAG, "Native generate failed, simulating", t)
+            ""
+        }
+
+        if (text.isBlank()) {
+            // Couldn't generate (stub or error) — fall back so the UI still responds.
             emitAll(simulate(history, agentMode))
-        } catch (t: UnsatisfiedLinkError) {
-            Log.w(TAG, "Native generate not available, simulating", t)
-            emitAll(simulate(history, agentMode))
+            return@flow
+        }
+
+        // The native call is blocking; replay the finished text word-by-word so
+        // the UI still feels like it's streaming.
+        for (word in text.trim().split(" ")) {
+            emit("$word ")
+            delay(8)
         }
     }.flowOn(Dispatchers.Default)
 
     /** Builds a chat-style prompt. Kept simple; real templates are model-specific. */
-    private fun buildPrompt(history: List<ChatMessage>): String =
+    private fun buildPrompt(history: List<ChatMessage>, agentMode: Boolean): String =
         buildString {
+            if (agentMode) {
+                append(AGENT_SYSTEM_PROMPT).append('\n')
+            }
             history.forEach { m ->
                 val tag = when (m.role) {
                     Role.USER -> "User"
@@ -150,5 +171,19 @@ class LlamaInferenceEngine {
             "_(Simulated agent — install the native backend for a real model to drive these tools.)_"
     }
 
-    companion object { private const val TAG = "LlamaEngine" }
+    companion object {
+        private const val TAG = "LlamaEngine"
+
+        /** Teaches the model the tool-call format the agent loop understands. */
+        private val AGENT_SYSTEM_PROMPT = """
+            System: You are an on-device agent that can act on the user's phone.
+            To use a tool, output a fenced block exactly like:
+            ```tool
+            {"tool":"list_files","args":{"path":"."}}
+            ```
+            Available tools: device_info, list_files, read_file, write_file, make_dir,
+            delete_file, list_apps, open_app, run_command. Use one tool per block, then
+            wait for the result before continuing. Explain briefly what you're doing.
+        """.trimIndent()
+    }
 }

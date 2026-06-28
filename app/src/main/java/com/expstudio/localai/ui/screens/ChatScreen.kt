@@ -67,6 +67,7 @@ import com.expstudio.localai.data.db.entities.Role
 import com.expstudio.localai.data.model.InferenceParams
 import com.expstudio.localai.ui.components.FloatParam
 import com.expstudio.localai.ui.components.IntParam
+import com.expstudio.localai.ui.util.collectAsStateSafe
 import com.expstudio.localai.ui.vm.AppViewModelFactory
 import com.expstudio.localai.ui.vm.ChatViewModel
 

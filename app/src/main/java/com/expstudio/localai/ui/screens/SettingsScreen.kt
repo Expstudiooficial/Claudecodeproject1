@@ -38,6 +38,7 @@ import com.expstudio.localai.smart.DeviceProfile
 import com.expstudio.localai.smart.SmartRecommendation
 import com.expstudio.localai.ui.components.FloatParam
 import com.expstudio.localai.ui.components.IntParam
+import com.expstudio.localai.ui.util.collectAsStateSafe
 import com.expstudio.localai.ui.vm.AppViewModelFactory
 import com.expstudio.localai.ui.vm.SettingsViewModel
 

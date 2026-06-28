@@ -11,6 +11,7 @@ import com.expstudio.localai.data.db.dao.ModelDao
 import com.expstudio.localai.data.db.entities.ChatMessage
 import com.expstudio.localai.data.db.entities.ChatSession
 import com.expstudio.localai.data.db.entities.InstalledModel
+import com.expstudio.localai.data.db.entities.Project
 import com.expstudio.localai.data.db.entities.Role
 
 class Converters {
@@ -19,8 +20,8 @@ class Converters {
 }
 
 @Database(
-    entities = [InstalledModel::class, ChatSession::class, ChatMessage::class],
-    version = 1,
+    entities = [InstalledModel::class, ChatSession::class, ChatMessage::class, Project::class],
+    version = 2,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -37,7 +38,10 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "localai.db",
-                ).build().also { INSTANCE = it }
+                )
+                    // Pre-release schema: recreate on upgrade rather than ship migrations.
+                    .fallbackToDestructiveMigration()
+                    .build().also { INSTANCE = it }
             }
     }
 }

@@ -11,17 +11,22 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.expstudio.localai.LocalAiApp
 import com.expstudio.localai.ui.screens.ChatScreen
 import com.expstudio.localai.ui.screens.HomeScreen
 import com.expstudio.localai.ui.screens.ModelManagerScreen
+import com.expstudio.localai.ui.screens.OnboardingScreen
 import com.expstudio.localai.ui.screens.SettingsScreen
 
 private sealed class Dest(val route: String, val label: String, val icon: ImageVector) {
@@ -34,6 +39,15 @@ private val bottomItems = listOf(Dest.Home, Dest.Models, Dest.Settings)
 
 @Composable
 fun LocalAiNavHost() {
+    val context = LocalContext.current
+    val store = remember { (context.applicationContext as LocalAiApp).container.settingsStore }
+    val settings by store.settings.collectAsState()
+
+    if (!settings.onboarded) {
+        OnboardingScreen(onDone = { store.setOnboarded(true) })
+        return
+    }
+
     val navController = rememberNavController()
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination

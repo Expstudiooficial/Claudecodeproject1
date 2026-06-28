@@ -9,6 +9,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import com.expstudio.localai.LocalAiApp
 import com.expstudio.localai.R
 import com.expstudio.localai.data.model.ModelCatalog
 import kotlinx.coroutines.CoroutineScope
@@ -18,10 +19,12 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**
- * Keeps a model download alive while the app is backgrounded by running it as a
- * foreground service with an ongoing progress notification.
+ * Foreground service that keeps the process alive (and shows an ongoing progress
+ * notification) while the app is backgrounded during downloads.
  *
- * Start with [start]; the heavy lifting is delegated to [ModelDownloadManager].
+ * It does **not** download anything itself — [DownloadCoordinator] owns the
+ * actual transfer. The service just mirrors the coordinator's [DownloadState]s
+ * into a notification and stops once nothing is active.
  */
 class DownloadService : Service() {
 
@@ -31,26 +34,30 @@ class DownloadService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val modelId = intent?.getStringExtra(EXTRA_MODEL_ID)
-        val model = modelId?.let { ModelCatalog.byId(it) }
-        if (model == null) { stopSelf(); return START_NOT_STICKY }
-
         ensureChannel()
-        startForeground(NOTIF_ID, buildNotification(model.displayName, 0))
+        startForeground(NOTIF_ID, buildNotification("Preparing…", 0))
 
-        val manager = ModelDownloadManager(this)
+        val coordinator = (application as LocalAiApp).container.downloadCoordinator
+        job?.cancel()
         job = scope.launch {
-            manager.download(model).collect { state ->
-                when (state) {
-                    is DownloadState.Downloading ->
-                        notify(buildNotification(model.displayName, state.percent))
-                    is DownloadState.Completed, is DownloadState.Failed,
-                    is DownloadState.Cancelled -> stopSelf()
-                    else -> Unit
+            coordinator.states.collect { states ->
+                val active = states.entries.firstOrNull { it.value is DownloadState.Downloading }
+                val verifying = states.values.any { it is DownloadState.Verifying }
+                when {
+                    active != null -> {
+                        val d = active.value as DownloadState.Downloading
+                        val name = ModelCatalog.byId(active.key)?.displayName ?: "Model"
+                        notify(buildNotification(name, d.percent))
+                    }
+                    verifying -> notify(buildNotification("Verifying…", 100))
+                    else -> {
+                        stopForeground(STOP_FOREGROUND_REMOVE)
+                        stopSelf()
+                    }
                 }
             }
         }
-        return START_NOT_STICKY
+        return START_STICKY
     }
 
     override fun onDestroy() {

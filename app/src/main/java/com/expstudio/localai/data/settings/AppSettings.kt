@@ -70,4 +70,6 @@ data class AppSettings(
     val dynamicColor: Boolean = true,
     val fontScale: Float = 1.0f,
     val showTimestamps: Boolean = true,
+    // First-run
+    val onboarded: Boolean = false,
 )

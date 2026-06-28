@@ -7,10 +7,33 @@ import androidx.room.Query
 import androidx.room.Update
 import com.expstudio.localai.data.db.entities.ChatMessage
 import com.expstudio.localai.data.db.entities.ChatSession
+import com.expstudio.localai.data.db.entities.Project
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ChatDao {
+    // ---- Projects ----
+    @Query("SELECT * FROM projects ORDER BY updatedAt DESC")
+    fun observeProjects(): Flow<List<Project>>
+
+    @Query("SELECT * FROM projects WHERE id = :id")
+    suspend fun getProject(id: Long): Project?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertProject(project: Project): Long
+
+    @Update
+    suspend fun updateProject(project: Project)
+
+    @Query("UPDATE chat_sessions SET projectId = NULL WHERE projectId = :id")
+    suspend fun detachSessionsFromProject(id: Long)
+
+    @Query("DELETE FROM projects WHERE id = :id")
+    suspend fun deleteProject(id: Long)
+
+    @Query("UPDATE chat_sessions SET projectId = :projectId WHERE id = :sessionId")
+    suspend fun assignSessionToProject(sessionId: Long, projectId: Long?)
+
     // ---- Sessions ----
     @Query("SELECT * FROM chat_sessions ORDER BY updatedAt DESC")
     fun observeSessions(): Flow<List<ChatSession>>

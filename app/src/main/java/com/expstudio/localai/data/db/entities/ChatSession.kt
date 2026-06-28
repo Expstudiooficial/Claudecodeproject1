@@ -12,6 +12,8 @@ data class ChatSession(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val title: String,
     val modelId: String?,
+    /** optional owning project; null = loose chat shown under "Chats". */
+    val projectId: Long? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
     // Sampling params snapshot (see InferenceParams)

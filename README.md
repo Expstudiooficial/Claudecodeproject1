@@ -13,6 +13,14 @@ resources — not just its raw specs.
 
 ## Features
 
+- 👋 **Guided first launch** — a welcome flow downloads a starter model in the
+  background and requests the permissions the app + agent need. No computer and
+  **no terminal** required (there isn't one on Android) — the app sets itself up.
+- 🗂️ **Projects** — group related chats into projects (like folders), create new
+  chats straight inside a project, or keep loose chats in the main list.
+- ⏬ **Background downloads** — model downloads run on an app-scoped coordinator
+  and a foreground service, so they keep going while you navigate around or
+  background the app, with a progress notification.
 - 🧠 **Smart Setup** — one button analyzes free RAM, CPU cores and device class,
   then picks the best model and tunes context window, threads, batch size and
   sampling. It deliberately leaves headroom for the OS and your other apps, and
@@ -50,7 +58,10 @@ Four headline picks tuned for phones, plus optional larger downloads:
 | **Phi-3.5 Mini Instruct** (Microsoft) | 3.8B | Q4_K_M | ~2.4 GB | ~2.6 GB |
 | **Mistral 7B Instruct v0.3** (Mistral AI) | 7.2B | Q4_K_M | ~4.4 GB | ~4.6 GB |
 
-Additional: Gemma 3n E2B / E4B, Qwen2.5 3B, Llama 3.2 3B. See
+Plus ~14 more downloads spanning tiny to flagship: Qwen2.5 0.5B / 3B / 7B,
+Llama 3.2 1B / 3B and Llama 3.1 8B, Gemma 3n E2B / E4B and Gemma 2 9B,
+Phi-3 Mini 4K, SmolLM2 1.7B, TinyLlama 1.1B, StableLM 2 Zephyr 1.6B and
+DeepSeek-R1 Distill Qwen 1.5B. See
 [`ModelCatalog.kt`](app/src/main/java/com/expstudio/localai/data/model/ModelCatalog.kt).
 
 ## Architecture
@@ -87,6 +98,11 @@ Open the project in Android Studio and run on a device/emulator for the full
 experience. Minimum Android 8.0 (API 26).
 
 ## Native backend
+
+> **End users never touch a terminal.** This section is for *developers* building
+> the app from source who want real (non-simulated) inference compiled into the
+> APK. On a phone you just install the APK and the in-app first-launch flow does
+> the rest.
 
 To enable real on-device inference, fetch llama.cpp into the native source tree
 and rebuild:

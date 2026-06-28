@@ -35,6 +35,10 @@ class ChatViewModel(private val container: AppContainer) : BaseViewModel() {
         container.chatRepository.sessions
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val projects: StateFlow<List<com.expstudio.localai.data.db.entities.Project>> =
+        container.chatRepository.projects
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val installedModels: StateFlow<List<InstalledModel>> =
         container.modelRepository.installedModels
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -95,17 +99,36 @@ class ChatViewModel(private val container: AppContainer) : BaseViewModel() {
     fun setAgentPermission(tool: AgentTool, allowed: Boolean) =
         container.settingsStore.setAgentPermission(tool, allowed)
 
-    fun newSession(onCreated: (Long) -> Unit) {
+    fun newSession(projectId: Long? = null, onCreated: (Long) -> Unit) {
         viewModelScope.launch {
             val firstModel = container.modelRepository.installedIds().firstOrNull()
             val id = container.chatRepository.createSession(
                 title = "New chat",
                 modelId = firstModel,
                 params = settings.value.defaults,
+                projectId = projectId,
             )
             _currentSessionId.value = id
             onCreated(id)
         }
+    }
+
+    fun createProject(name: String, onCreated: (Long) -> Unit = {}) {
+        viewModelScope.launch {
+            val id = container.chatRepository.createProject(
+                name = name.ifBlank { "New project" },
+                colorIndex = (projects.value.size % 6),
+            )
+            onCreated(id)
+        }
+    }
+
+    fun deleteProject(id: Long) {
+        viewModelScope.launch { container.chatRepository.deleteProject(id) }
+    }
+
+    fun moveSessionToProject(sessionId: Long, projectId: Long?) {
+        viewModelScope.launch { container.chatRepository.assignSessionToProject(sessionId, projectId) }
     }
 
     fun deleteSession(id: Long) {

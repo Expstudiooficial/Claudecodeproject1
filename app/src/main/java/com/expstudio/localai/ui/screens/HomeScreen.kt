@@ -31,7 +31,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.expstudio.localai.data.db.entities.ChatSession
-import com.expstudio.localai.ui.util.collectAsStateSafe
 import com.expstudio.localai.ui.vm.AppViewModelFactory
 import com.expstudio.localai.ui.vm.ChatViewModel
 

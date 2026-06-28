@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -67,7 +68,6 @@ import com.expstudio.localai.data.db.entities.Role
 import com.expstudio.localai.data.model.InferenceParams
 import com.expstudio.localai.ui.components.FloatParam
 import com.expstudio.localai.ui.components.IntParam
-import com.expstudio.localai.ui.util.collectAsStateSafe
 import com.expstudio.localai.ui.vm.AppViewModelFactory
 import com.expstudio.localai.ui.vm.ChatViewModel
 
@@ -445,4 +445,4 @@ private fun InputBar(
 /** Horizontal scroll helper kept local to avoid an extra import at call sites. */
 @Composable
 private fun Modifier.horizontalScrollRow(): Modifier =
-    this.then(androidx.compose.foundation.horizontalScroll(rememberScrollState()))
+    this.horizontalScroll(rememberScrollState())
